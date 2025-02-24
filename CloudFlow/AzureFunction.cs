@@ -1,5 +1,8 @@
 using Azure.Messaging.ServiceBus;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues;
+using HttpMultipartParser;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -7,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Text;
+using System.Text.Json;
 
 namespace CloudFlow
 {
@@ -149,6 +153,79 @@ namespace CloudFlow
             catch (Exception)
             {
                 return new OkObjectResult("No message in the queue");
+            }
+        }
+
+        [Function("blobStorage")]
+        public async Task<IActionResult> UploadFile([HttpTrigger(AuthorizationLevel.Function, "post", Route = "blobStorage")] HttpRequest request)
+        {
+            try
+            {
+                string connectionString = _configuration["AzureStorageConnectionString"]; // "your_connection_string";
+                string containerName = _configuration["containerName"]; ;
+
+                BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
+                BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+                await containerClient.CreateIfNotExistsAsync();
+
+                var data = await MultipartFormDataParser.ParseAsync(request.Body);
+                var file = data.Files.FirstOrDefault();
+
+                BlobClient blobClient = containerClient.GetBlobClient(file.FileName);
+                await blobClient.UploadAsync(file.Data, true);
+
+                return new OkObjectResult($"File uploaded Successfully, FileName: {file.FileName}");
+            }
+            catch (Exception)
+            {
+                return new OkObjectResult("File not uploaded!");
+            }
+        }
+
+        [Function("downloadFile")]
+        public async Task<IActionResult> DownloadFileFromAzureBlobStorage(
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "downloadFile")] HttpRequest request)
+        {
+            try
+            {
+                string connectionString = _configuration["AzureStorageConnectionString"];
+                string containerName = _configuration["containerName"];
+
+                // Read request body
+                string requestBody = await new StreamReader(request.Body).ReadToEndAsync();
+                dynamic data = JsonConvert.DeserializeObject<dynamic>(requestBody);
+
+                if (data == null || data.fileName == null)
+                {
+                    return new BadRequestObjectResult("File Name is required.");
+                }
+
+                string fileName = data.fileName.ToString();
+                string downloadsPath = Path.Combine(Directory.GetCurrentDirectory(), "Downloads");
+
+                if (!Directory.Exists(downloadsPath))
+                {
+                    Directory.CreateDirectory(downloadsPath);
+                }
+
+                string filePath = Path.Combine(downloadsPath, fileName);
+
+                // Initialize Blob Client
+                BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
+                BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+                BlobClient blobClient = containerClient.GetBlobClient(fileName);
+
+                // Download the file
+                BlobDownloadInfo download = await blobClient.DownloadAsync();
+                await using FileStream downloadFileStream = File.OpenWrite(filePath);
+                await download.Content.CopyToAsync(downloadFileStream);
+                await downloadFileStream.FlushAsync();
+
+                return new OkObjectResult($"File downloaded successfully at path: {filePath}");
+            }
+            catch (Exception ex)
+            {
+                return new ObjectResult($"Error downloading file: {ex.Message}") { StatusCode = 500 };
             }
         }
     }
