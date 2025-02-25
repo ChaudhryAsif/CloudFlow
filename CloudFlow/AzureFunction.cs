@@ -13,7 +13,7 @@ using Newtonsoft.Json;
 using System.Text;
 using System.Text.Json;
 
-namespace CloudFlow
+namespace AzzurFunctionApp
 {
     public class AzureFunction
     {
