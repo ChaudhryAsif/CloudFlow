@@ -3,6 +3,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues;
 using HttpMultipartParser;
+using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -18,12 +19,14 @@ namespace CloudFlow
     {
         private readonly ILogger<AzureFunction> _logger;
         private readonly IConfiguration _configuration;
+        private readonly TelemetryClient _telemetryClient;
         private string queueConnectionString;
 
-        public AzureFunction(ILogger<AzureFunction> logger, IConfiguration configuration)
+        public AzureFunction(ILogger<AzureFunction> logger, IConfiguration configuration, TelemetryClient telemetryClient)
         {
             _logger = logger;
             _configuration = configuration;
+            _telemetryClient = telemetryClient;
             queueConnectionString = _configuration["AzureWebJobsStorageConnection"];
         }
 
@@ -156,12 +159,12 @@ namespace CloudFlow
             }
         }
 
-        [Function("blobStorage")]
-        public async Task<IActionResult> UploadFile([HttpTrigger(AuthorizationLevel.Function, "post", Route = "blobStorage")] HttpRequest request)
+        [Function("UploadFile")]
+        public async Task<IActionResult> UploadFile([HttpTrigger(AuthorizationLevel.Function, "post", Route = "UploadFile")] HttpRequest request)
         {
             try
             {
-                string connectionString = _configuration["AzureStorageConnectionString"]; // "your_connection_string";
+                string connectionString = _configuration["AzureStorageConnectionString"];
                 string containerName = _configuration["containerName"]; ;
 
                 BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
@@ -188,6 +191,7 @@ namespace CloudFlow
         {
             try
             {
+                _telemetryClient.TrackEvent("Processing the download file");
                 string connectionString = _configuration["AzureStorageConnectionString"];
                 string containerName = _configuration["containerName"];
 
@@ -197,9 +201,11 @@ namespace CloudFlow
 
                 if (data == null || data.fileName == null)
                 {
+                    _logger.LogError("File Name is required.");
                     return new BadRequestObjectResult("File Name is required.");
                 }
 
+                _logger.LogInformation($"File name: {data.fileName} to be download");
                 string fileName = data.fileName.ToString();
                 string downloadsPath = Path.Combine(Directory.GetCurrentDirectory(), "Downloads");
 
@@ -210,10 +216,14 @@ namespace CloudFlow
 
                 string filePath = Path.Combine(downloadsPath, fileName);
 
+                _logger.LogInformation($"Initialize blob client");
+
                 // Initialize Blob Client
                 BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
                 BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
                 BlobClient blobClient = containerClient.GetBlobClient(fileName);
+
+                _logger.LogInformation($"Start downloading the file");
 
                 // Download the file
                 BlobDownloadInfo download = await blobClient.DownloadAsync();
@@ -221,10 +231,13 @@ namespace CloudFlow
                 await download.Content.CopyToAsync(downloadFileStream);
                 await downloadFileStream.FlushAsync();
 
+                _logger.LogInformation($"File downloaded successfully");
+
                 return new OkObjectResult($"File downloaded successfully at path: {filePath}");
             }
             catch (Exception ex)
             {
+                _logger.LogError($"Error downloading file: {ex.Message}");
                 return new ObjectResult($"Error downloading file: {ex.Message}") { StatusCode = 500 };
             }
         }
