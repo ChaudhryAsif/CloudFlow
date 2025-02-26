@@ -2,11 +2,11 @@
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "AzureWebJobsStorageConnection": "DefaultEndpointsProtocol=https;AccountName=cloudflowxstorage;AccountKey=Sp1j00E+J1SuJMU9Ok8itmN5SE1nXyo285wdnX4/kN3HdvkRyjzf3lObSOXGBIUfUr8NtszOo+gk+AStZzEGEA==;EndpointSuffix=core.windows.net",
+    "AzureQueueConnectionString": "DefaultEndpointsProtocol=https;AccountName=cloudflowxstorage;AccountKey=Sp1j00E+J1SuJMU9Ok8itmN5SE1nXyo285wdnX4/kN3HdvkRyjzf3lObSOXGBIUfUr8NtszOo+gk+AStZzEGEA==;EndpointSuffix=core.windows.net",
     "messageQueue": "messagequeue",
     "ServiceBusQueueName": "busqueue",
     "ServiceBusConnectionString": "Endpoint=sb://cloudmotion.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=P/qYzcmRLL1BKW07ozGVxBINU/cK3w92Q+ASbDgKDiA=",
-    "AzureStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=cloudflowxstorage;AccountKey=Sp1j00E+J1SuJMU9Ok8itmN5SE1nXyo285wdnX4/kN3HdvkRyjzf3lObSOXGBIUfUr8NtszOo+gk+AStZzEGEA==;EndpointSuffix=core.windows.net",
+    //"AzureStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=cloudflowxstorage;AccountKey=Sp1j00E+J1SuJMU9Ok8itmN5SE1nXyo285wdnX4/kN3HdvkRyjzf3lObSOXGBIUfUr8NtszOo+gk+AStZzEGEA==;EndpointSuffix=core.windows.net",
     "ContainerName": "cloudcontainer",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
   },
