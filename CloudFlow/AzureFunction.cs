@@ -328,11 +328,6 @@ namespace AzzurFunctionApp
             }
         }
 
-        /// <summary>
-        /// Azure Function to download a file from Azure Blob Storage.
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
         [Function("DownloadBlobFile")]
         public async Task<IActionResult> DownloadBlobFileAsync([HttpTrigger(AuthorizationLevel.Function, "post", Route = "DownloadBlobFile")] HttpRequest request)
         {
