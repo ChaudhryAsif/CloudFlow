@@ -195,8 +195,7 @@ namespace AzzurFunctionApp
         /// <param name="message"></param>
         /// <returns></returns>
         [Function("ProcessServiceBusMessage")]
-        public async Task ProcessServiceBusMessage(
-            [ServiceBusTrigger("busqueue", Connection = "ServiceBusConnectionString")] string message)
+        public async Task ProcessServiceBusMessage([ServiceBusTrigger("busqueue", Connection = "ServiceBusConnectionString")] string message)
         {
             try
             {
