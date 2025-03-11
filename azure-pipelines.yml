@@ -9,6 +9,7 @@ pool:
   name: 'CloudAgent'
 
 variables:
+  isDevelop: $[eq(variables['Build.SourceBranch'], 'refs/heads/develop')]
   isMaster: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
   buildConfiguration: 'Release'
 
@@ -19,36 +20,12 @@ stages:
   - job: BuildJob
     displayName: 'Build and Test'
     steps:
-    - script: echo "Building the application..."
-      displayName: 'Build Process'
+    - script: echo "Building the application... Branch is $(Build.SourceBranchName)"
+      displayName: 'Build Information'
       
-    # Example build steps (replace with your actual build commands)
-    # - task: DotNetCoreCLI@2
-    #   inputs:
-    #     command: 'build'
-    #     projects: '**/*.csproj'
-    #     arguments: '--configuration $(buildConfiguration)'
-    #   displayName: 'Build Application'
-    
-    # - task: DotNetCoreCLI@2
-    #   inputs:
-    #     command: 'test'
-    #     projects: '**/*Tests/*.csproj'
-    #     arguments: '--configuration $(buildConfiguration)'
-    #   displayName: 'Run Tests'
-    
-    # Package the application
+    # Your build steps here
     - script: echo "Packaging the application..."
       displayName: 'Package Application'
-      
-    # Example packaging task
-    # - task: DotNetCoreCLI@2
-    #   inputs:
-    #     command: 'publish'
-    #     publishWebProjects: true
-    #     arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
-    #     zipAfterPublish: true
-    #   displayName: 'Package Application'
     
     # Publish the artifact for use in deployment stages
     - task: PublishBuildArtifacts@1
@@ -57,11 +34,11 @@ stages:
         artifactName: 'drop'
       displayName: 'Publish Build Artifacts'
 
-# Deploy to Dev automatically for develop branch
+# Deploy to Dev ONLY for develop branch
 - stage: DeployToDev
   displayName: 'Deploy to Development'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables.isMaster, false))
+  condition: and(succeeded(), eq(variables.isDevelop, true))
   jobs:
   - deployment: DeployDev
     displayName: 'Deploy to Dev Environment'
@@ -80,10 +57,11 @@ stages:
           
           - script: |
               echo "Deploying to development environment..."
+              echo "Current branch: $(Build.SourceBranchName)"
               # Add your actual deployment commands here
             displayName: 'Deploy to Development'
 
-# Deploy to Production with approval for master branch
+# Deploy to Production with approval ONLY for master branch
 - stage: DeployToProd
   displayName: 'Deploy to Production'
   dependsOn: Build
@@ -106,5 +84,6 @@ stages:
           
           - script: |
               echo "Deploying to production environment..."
+              echo "Current branch: $(Build.SourceBranchName)"
               # Add your actual production deployment commands here
             displayName: 'Deploy to Production'
