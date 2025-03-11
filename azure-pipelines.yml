@@ -1,28 +1,110 @@
+# azure-pipelines.yml
 trigger:
-- master
+  branches:
+    include:
+      - develop
+      - master
 
 pool:
-  name: 'CloudAgent'  # Change this to your self-hosted agent pool name
+  name: 'CloudAgent'
 
 variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
+  isMaster: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
   buildConfiguration: 'Release'
 
-steps:
-- task: NuGetToolInstaller@1
+stages:
+- stage: Build
+  displayName: 'Build Application'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build and Test'
+    steps:
+    - script: echo "Building the application..."
+      displayName: 'Build Process'
+      
+    # Example build steps (replace with your actual build commands)
+    # - task: DotNetCoreCLI@2
+    #   inputs:
+    #     command: 'build'
+    #     projects: '**/*.csproj'
+    #     arguments: '--configuration $(buildConfiguration)'
+    #   displayName: 'Build Application'
+    
+    # - task: DotNetCoreCLI@2
+    #   inputs:
+    #     command: 'test'
+    #     projects: '**/*Tests/*.csproj'
+    #     arguments: '--configuration $(buildConfiguration)'
+    #   displayName: 'Run Tests'
+    
+    # Package the application
+    - script: echo "Packaging the application..."
+      displayName: 'Package Application'
+      
+    # Example packaging task
+    # - task: DotNetCoreCLI@2
+    #   inputs:
+    #     command: 'publish'
+    #     publishWebProjects: true
+    #     arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    #     zipAfterPublish: true
+    #   displayName: 'Package Application'
+    
+    # Publish the artifact for use in deployment stages
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.ArtifactStagingDirectory)'
+        artifactName: 'drop'
+      displayName: 'Publish Build Artifacts'
 
-- task: NuGetCommand@2
-  inputs:
-    restoreSolution: '$(solution)'
+# Deploy to Dev automatically for develop branch
+- stage: DeployToDev
+  displayName: 'Deploy to Development'
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables.isMaster, false))
+  jobs:
+  - deployment: DeployDev
+    displayName: 'Deploy to Dev Environment'
+    environment: 'Development'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: 'Download Build Artifacts'
+          
+          - script: |
+              echo "Deploying to development environment..."
+              # Add your actual deployment commands here
+            displayName: 'Deploy to Development'
 
-- task: VSBuild@1
-  inputs:
-    solution: '$(solution)'
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
-
-- task: VSTest@2
-  inputs:
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
+# Deploy to Production with approval for master branch
+- stage: DeployToProd
+  displayName: 'Deploy to Production'
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables.isMaster, true))
+  jobs:
+  - deployment: DeployProd
+    displayName: 'Deploy to Production Environment'
+    environment: 'Production'  # This environment has approval gates configured
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: 'Download Build Artifacts'
+          
+          - script: |
+              echo "Deploying to production environment..."
+              # Add your actual production deployment commands here
+            displayName: 'Deploy to Production'
