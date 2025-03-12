@@ -66,7 +66,7 @@ stages:
               ./deploy_dev.sh  # Example deployment script
             displayName: 'Deploy to Development'
 
-# Deploy to Production with approval ONLY for master branch
+# Deploy to Production with manual approval ONLY for master branch
 - stage: DeployToProd
   displayName: 'Deploy to Production'
   dependsOn: Build
