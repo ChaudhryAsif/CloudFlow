@@ -43,7 +43,7 @@ stages:
 - stage: DeployToDev
   displayName: 'Deploy to Development'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'develop'))
   jobs:
   - deployment: DeployDev
     displayName: 'Deploy to Dev Environment'
@@ -70,7 +70,7 @@ stages:
 - stage: DeployToProd
   displayName: 'Deploy to Production'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
   jobs:
   - deployment: DeployProd
     displayName: 'Deploy to Production Environment'
