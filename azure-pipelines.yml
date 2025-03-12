@@ -39,11 +39,11 @@ stages:
         artifactName: 'drop'
       displayName: 'Publish Build Artifacts'
 
-# Deploy to Development ONLY for develop branch
+# Deploy to Development for develop and master branches
 - stage: DeployToDev
   displayName: 'Deploy to Development'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'develop'))
+  condition: or(eq(variables['Build.SourceBranchName'], 'develop'), eq(variables['Build.SourceBranchName'], 'master'))
   jobs:
   - deployment: DeployDev
     displayName: 'Deploy to Dev Environment'
