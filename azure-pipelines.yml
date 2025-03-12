@@ -20,11 +20,10 @@ stages:
     - script: echo "Building the application... Branch is $(Build.SourceBranchName)"
       displayName: 'Build Information'
 
-    # Ensure .NET application is built properly
     - task: UseDotNet@2
       inputs:
         packageType: 'sdk'
-        version: '8.x'  # Ensure correct .NET version
+        version: '8.x'
       displayName: 'Install .NET SDK'
 
     - task: DotNetCoreCLI@2
@@ -34,13 +33,16 @@ stages:
         arguments: '--configuration $(buildConfiguration)'
       displayName: 'Build .NET Application'
 
-    # Debugging: List files after build
+    # Debugging: List files after build (Fixed OS-specific commands)
     - script: |
         echo "Listing build output..."
-        ls -la $(Build.SourcesDirectory)/bin/$(buildConfiguration)
+        if exist C:\Windows\System32\cmd.exe (
+            dir $(Build.SourcesDirectory)\bin\$(buildConfiguration)
+        ) else (
+            ls -la $(Build.SourcesDirectory)/bin/$(buildConfiguration)
+        )
       displayName: 'Check Build Output Files'
 
-    # Copy build outputs to artifact staging directory
     - task: CopyFiles@2
       inputs:
         SourceFolder: '$(Build.SourcesDirectory)/bin/$(buildConfiguration)'
@@ -48,24 +50,27 @@ stages:
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
       displayName: 'Copy Build Output to Artifact Staging'
 
-    # Debugging: List files in artifact staging directory
+    # Debugging: List files in artifact staging directory (Fixed OS-specific commands)
     - script: |
         echo "Listing artifact staging directory..."
-        ls -la $(Build.ArtifactStagingDirectory)
+        if exist C:\Windows\System32\cmd.exe (
+            dir $(Build.ArtifactStagingDirectory)
+        ) else (
+            ls -la $(Build.ArtifactStagingDirectory)
+        )
       displayName: 'Verify Artifact Staging Directory'
 
-    # Publish the artifact for use in deployment stages
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: 'drop'
       displayName: 'Publish Build Artifacts'
 
-# Deploy to Development for develop and master branches
+# Deploy to Development (Fixed Condition)
 - stage: DeployToDev
   displayName: 'Deploy to Development'
   dependsOn: Build
-  condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  condition: or(eq(variables['Build.SourceBranchName'], 'develop'), eq(variables['Build.SourceBranchName'], 'master'))
   jobs:
   - deployment: DeployDev
     displayName: 'Deploy to Dev Environment'
@@ -84,25 +89,33 @@ stages:
 
           - script: |
               echo "Listing deployment directory..."
-              ls -la $(Pipeline.Workspace)/drop
+              if exist C:\Windows\System32\cmd.exe (
+                  dir $(Pipeline.Workspace)\drop
+              ) else (
+                  ls -la $(Pipeline.Workspace)/drop
+              )
             displayName: 'Debug Deployment Files'
 
           - script: |
-              chmod +x $(Pipeline.Workspace)/drop/deploy_dev.sh
               echo "Starting deployment..."
-              /bin/bash $(Pipeline.Workspace)/drop/deploy_dev.sh
+              if exist C:\Windows\System32\cmd.exe (
+                  echo "Deployment script is not configured for Windows!"
+              ) else (
+                  chmod +x $(Pipeline.Workspace)/drop/deploy_dev.sh
+                  /bin/bash $(Pipeline.Workspace)/drop/deploy_dev.sh
+              )
             displayName: 'Deploy to Development'
             failOnStderr: true
 
-# Deploy to Production with manual approval ONLY for master branch
+# Deploy to Production (Fixed Condition)
 - stage: DeployToProd
   displayName: 'Deploy to Production'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
   jobs:
   - deployment: DeployProd
     displayName: 'Deploy to Production Environment'
-    environment: 'Production'  # This environment should have approval gates configured
+    environment: 'Production'
     strategy:
       runOnce:
         deploy:
@@ -117,12 +130,20 @@ stages:
 
           - script: |
               echo "Listing deployment directory..."
-              ls -la $(Pipeline.Workspace)/drop
+              if exist C:\Windows\System32\cmd.exe (
+                  dir $(Pipeline.Workspace)\drop
+              ) else (
+                  ls -la $(Pipeline.Workspace)/drop
+              )
             displayName: 'Debug Deployment Files'
 
           - script: |
-              chmod +x $(Pipeline.Workspace)/drop/deploy_prod.sh
               echo "Starting deployment..."
-              /bin/bash $(Pipeline.Workspace)/drop/deploy_prod.sh
+              if exist C:\Windows\System32\cmd.exe (
+                  echo "Deployment script is not configured for Windows!"
+              ) else (
+                  chmod +x $(Pipeline.Workspace)/drop/deploy_prod.sh
+                  /bin/bash $(Pipeline.Workspace)/drop/deploy_prod.sh
+              )
             displayName: 'Deploy to Production'
             failOnStderr: true
