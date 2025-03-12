@@ -27,7 +27,7 @@ stages:
     # Copy build outputs to artifact staging directory
     - task: CopyFiles@2
       inputs:
-        SourceFolder: '$(Build.SourcesDirectory)'  # Changed from $(Build.BinariesDirectory)
+        SourceFolder: '$(Build.BinariesDirectory)'
         Contents: '**/*'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
       displayName: 'Copy Build Output to Artifact Staging'
@@ -43,7 +43,7 @@ stages:
 - stage: DeployToDev
   displayName: 'Deploy to Development'
   dependsOn: Build
-  condition: or(startsWith(variables['Build.SourceBranch'], 'refs/heads/develop'), startsWith(variables['Build.SourceBranch'], 'refs/heads/master'))
+  condition: or(eq(variables['Build.SourceBranchName'], 'develop'), eq(variables['Build.SourceBranchName'], 'master'))
   jobs:
   - deployment: DeployDev
     displayName: 'Deploy to Dev Environment'
@@ -57,7 +57,7 @@ stages:
               buildType: 'current'
               downloadType: 'single'
               artifactName: 'drop'
-              downloadPath: '$(Pipeline.Workspace)'  # Changed from $(System.ArtifactsDirectory)
+              downloadPath: '$(System.ArtifactsDirectory)'
             displayName: 'Download Build Artifacts'
           
           - script: |
@@ -70,7 +70,7 @@ stages:
 - stage: DeployToProd
   displayName: 'Deploy to Production'
   dependsOn: Build
-  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/master'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
   jobs:
   - deployment: DeployProd
     displayName: 'Deploy to Production Environment'
@@ -84,7 +84,7 @@ stages:
               buildType: 'current'
               downloadType: 'single'
               artifactName: 'drop'
-              downloadPath: '$(Pipeline.Workspace)'  # Changed from $(System.ArtifactsDirectory)
+              downloadPath: '$(System.ArtifactsDirectory)'
             displayName: 'Download Build Artifacts'
           
           - script: |
