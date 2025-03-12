@@ -20,12 +20,14 @@ stages:
     - script: echo "Building the application... Branch is $(Build.SourceBranchName)"
       displayName: 'Build Information'
 
+    # Install .NET SDK
     - task: UseDotNet@2
       inputs:
         packageType: 'sdk'
         version: '8.x'
       displayName: 'Install .NET SDK'
 
+    # Build the .NET application
     - task: DotNetCoreCLI@2
       inputs:
         command: 'build'
@@ -33,44 +35,38 @@ stages:
         arguments: '--configuration $(buildConfiguration)'
       displayName: 'Build .NET Application'
 
-    # Debugging: List files after build (Fixed OS-specific commands)
+    # ✅ FIX: Check Build Output (Windows-Compatible)
     - script: |
         echo "Listing build output..."
-        if exist C:\Windows\System32\cmd.exe (
-            dir $(Build.SourcesDirectory)\bin\$(buildConfiguration)
-        ) else (
-            ls -la $(Build.SourcesDirectory)/bin/$(buildConfiguration)
-        )
+        dir "$(Build.SourcesDirectory)\bin\$(buildConfiguration)" /s
       displayName: 'Check Build Output Files'
 
+    # Copy build outputs to artifact staging directory
     - task: CopyFiles@2
       inputs:
-        SourceFolder: '$(Build.SourcesDirectory)/bin/$(buildConfiguration)'
+        SourceFolder: '$(Build.SourcesDirectory)\bin\$(buildConfiguration)'
         Contents: '**/*'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
       displayName: 'Copy Build Output to Artifact Staging'
 
-    # Debugging: List files in artifact staging directory (Fixed OS-specific commands)
+    # ✅ FIX: Check Artifact Staging (Windows-Compatible)
     - script: |
         echo "Listing artifact staging directory..."
-        if exist C:\Windows\System32\cmd.exe (
-            dir $(Build.ArtifactStagingDirectory)
-        ) else (
-            ls -la $(Build.ArtifactStagingDirectory)
-        )
+        dir "$(Build.ArtifactStagingDirectory)" /s
       displayName: 'Verify Artifact Staging Directory'
 
+    # Publish build artifacts
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: 'drop'
       displayName: 'Publish Build Artifacts'
 
-# Deploy to Development (Fixed Condition)
+# Deploy to Development
 - stage: DeployToDev
   displayName: 'Deploy to Development'
   dependsOn: Build
-  condition: or(eq(variables['Build.SourceBranchName'], 'develop'), eq(variables['Build.SourceBranchName'], 'master'))
+  condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   jobs:
   - deployment: DeployDev
     displayName: 'Deploy to Dev Environment'
@@ -87,31 +83,23 @@ stages:
               downloadPath: '$(Pipeline.Workspace)/drop'
             displayName: 'Download Build Artifacts'
 
+          # ✅ FIX: Windows-Compatible Debug Step
           - script: |
               echo "Listing deployment directory..."
-              if exist C:\Windows\System32\cmd.exe (
-                  dir $(Pipeline.Workspace)\drop
-              ) else (
-                  ls -la $(Pipeline.Workspace)/drop
-              )
+              dir "$(Pipeline.Workspace)\drop" /s
             displayName: 'Debug Deployment Files'
 
           - script: |
               echo "Starting deployment..."
-              if exist C:\Windows\System32\cmd.exe (
-                  echo "Deployment script is not configured for Windows!"
-              ) else (
-                  chmod +x $(Pipeline.Workspace)/drop/deploy_dev.sh
-                  /bin/bash $(Pipeline.Workspace)/drop/deploy_dev.sh
-              )
+              powershell -ExecutionPolicy Bypass -File "$(Pipeline.Workspace)\drop\deploy_dev.ps1"
             displayName: 'Deploy to Development'
             failOnStderr: true
 
-# Deploy to Production (Fixed Condition)
+# Deploy to Production (Manual Approval)
 - stage: DeployToProd
   displayName: 'Deploy to Production'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   jobs:
   - deployment: DeployProd
     displayName: 'Deploy to Production Environment'
@@ -128,22 +116,14 @@ stages:
               downloadPath: '$(Pipeline.Workspace)/drop'
             displayName: 'Download Build Artifacts'
 
+          # ✅ FIX: Windows-Compatible Debug Step
           - script: |
               echo "Listing deployment directory..."
-              if exist C:\Windows\System32\cmd.exe (
-                  dir $(Pipeline.Workspace)\drop
-              ) else (
-                  ls -la $(Pipeline.Workspace)/drop
-              )
+              dir "$(Pipeline.Workspace)\drop" /s
             displayName: 'Debug Deployment Files'
 
           - script: |
               echo "Starting deployment..."
-              if exist C:\Windows\System32\cmd.exe (
-                  echo "Deployment script is not configured for Windows!"
-              ) else (
-                  chmod +x $(Pipeline.Workspace)/drop/deploy_prod.sh
-                  /bin/bash $(Pipeline.Workspace)/drop/deploy_prod.sh
-              )
+              powershell -ExecutionPolicy Bypass -File "$(Pipeline.Workspace)\drop\deploy_prod.ps1"
             displayName: 'Deploy to Production'
             failOnStderr: true
