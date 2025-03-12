@@ -1,4 +1,3 @@
-# azure-pipelines.yml
 trigger:
   branches:
     include:
@@ -9,8 +8,6 @@ pool:
   name: 'CloudAgent'
 
 variables:
-  isDevelop: $[eq(variables['Build.SourceBranch'], 'refs/heads/develop')]
-  isMaster: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
   buildConfiguration: 'Release'
 
 stages:
@@ -27,6 +24,14 @@ stages:
     - script: echo "Packaging the application..."
       displayName: 'Package Application'
     
+    # Copy build outputs to artifact staging directory
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: '$(Build.BinariesDirectory)'
+        Contents: '**/*'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+      displayName: 'Copy Build Output to Artifact Staging'
+    
     # Publish the artifact for use in deployment stages
     - task: PublishBuildArtifacts@1
       inputs:
@@ -34,11 +39,11 @@ stages:
         artifactName: 'drop'
       displayName: 'Publish Build Artifacts'
 
-# Deploy to Dev ONLY for develop branch
+# Deploy to Development ONLY for develop branch
 - stage: DeployToDev
   displayName: 'Deploy to Development'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables.isDevelop, true))
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
   jobs:
   - deployment: DeployDev
     displayName: 'Deploy to Dev Environment'
@@ -47,7 +52,7 @@ stages:
       runOnce:
         deploy:
           steps:
-          - task: DownloadBuildArtifacts@0
+          - task: DownloadBuildArtifacts@1
             inputs:
               buildType: 'current'
               downloadType: 'single'
@@ -58,23 +63,23 @@ stages:
           - script: |
               echo "Deploying to development environment..."
               echo "Current branch: $(Build.SourceBranchName)"
-              # Add your actual deployment commands here
+              ./deploy_dev.sh  # Example deployment script
             displayName: 'Deploy to Development'
 
 # Deploy to Production with approval ONLY for master branch
 - stage: DeployToProd
   displayName: 'Deploy to Production'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables.isMaster, true))
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   jobs:
   - deployment: DeployProd
     displayName: 'Deploy to Production Environment'
-    environment: 'Production'  # This environment has approval gates configured
+    environment: 'Production'  # This environment should have approval gates configured
     strategy:
       runOnce:
         deploy:
           steps:
-          - task: DownloadBuildArtifacts@0
+          - task: DownloadBuildArtifacts@1
             inputs:
               buildType: 'current'
               downloadType: 'single'
@@ -85,5 +90,5 @@ stages:
           - script: |
               echo "Deploying to production environment..."
               echo "Current branch: $(Build.SourceBranchName)"
-              # Add your actual production deployment commands here
+              ./deploy_prod.sh  # Example production deployment script
             displayName: 'Deploy to Production'
