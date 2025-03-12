@@ -43,7 +43,7 @@ stages:
 - stage: DeployToDev
   displayName: 'Deploy to Development'
   dependsOn: Build
-  condition: or(eq(variables['Build.SourceBranchName'], 'develop'), eq(variables['Build.SourceBranchName'], 'master'))
+  condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   jobs:
   - deployment: DeployDev
     displayName: 'Deploy to Dev Environment'
@@ -57,20 +57,30 @@ stages:
               buildType: 'current'
               downloadType: 'single'
               artifactName: 'drop'
-              downloadPath: '$(System.ArtifactsDirectory)'
+              downloadPath: '$(Pipeline.Workspace)/drop'
             displayName: 'Download Build Artifacts'
-          
+
           - script: |
-              echo "Deploying to development environment..."
-              echo "Current branch: $(Build.SourceBranchName)"
-              ./deploy_dev.sh  # Example deployment script
+              echo "Listing deployment directory..."
+              ls -la $(Pipeline.Workspace)/drop
+              echo "Checking environment variables..."
+              env
+            displayName: 'Debug Deployment Files and Environment'
+
+          - script: |
+              echo "Converting script to Unix format..."
+              /usr/bin/dos2unix $(Pipeline.Workspace)/drop/deploy_dev.sh || echo "dos2unix not found, skipping..."
+              chmod +x $(Pipeline.Workspace)/drop/deploy_dev.sh
+              echo "Starting deployment..."
+              /bin/bash $(Pipeline.Workspace)/drop/deploy_dev.sh
             displayName: 'Deploy to Development'
+            failOnStderr: true
 
 # Deploy to Production with manual approval ONLY for master branch
 - stage: DeployToProd
   displayName: 'Deploy to Production'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
   jobs:
   - deployment: DeployProd
     displayName: 'Deploy to Production Environment'
@@ -84,11 +94,21 @@ stages:
               buildType: 'current'
               downloadType: 'single'
               artifactName: 'drop'
-              downloadPath: '$(System.ArtifactsDirectory)'
+              downloadPath: '$(Pipeline.Workspace)/drop'
             displayName: 'Download Build Artifacts'
           
           - script: |
-              echo "Deploying to production environment..."
-              echo "Current branch: $(Build.SourceBranchName)"
-              ./deploy_prod.sh  # Example production deployment script
+              echo "Listing deployment directory..."
+              ls -la $(Pipeline.Workspace)/drop
+              echo "Checking environment variables..."
+              env
+            displayName: 'Debug Deployment Files and Environment'
+
+          - script: |
+              echo "Converting script to Unix format..."
+              /usr/bin/dos2unix $(Pipeline.Workspace)/drop/deploy_prod.sh || echo "dos2unix not found, skipping..."
+              chmod +x $(Pipeline.Workspace)/drop/deploy_prod.sh
+              echo "Starting deployment..."
+              /bin/bash $(Pipeline.Workspace)/drop/deploy_prod.sh
             displayName: 'Deploy to Production'
+            failOnStderr: true
