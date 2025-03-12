@@ -19,19 +19,41 @@ stages:
     steps:
     - script: echo "Building the application... Branch is $(Build.SourceBranchName)"
       displayName: 'Build Information'
-      
-    # Your build steps here
-    - script: echo "Packaging the application..."
-      displayName: 'Package Application'
-    
+
+    # Ensure .NET application is built properly
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '8.x'  # Ensure correct .NET version
+      displayName: 'Install .NET SDK'
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+      displayName: 'Build .NET Application'
+
+    # Debugging: List files after build
+    - script: |
+        echo "Listing build output..."
+        ls -la $(Build.SourcesDirectory)/bin/$(buildConfiguration)
+      displayName: 'Check Build Output Files'
+
     # Copy build outputs to artifact staging directory
     - task: CopyFiles@2
       inputs:
-        SourceFolder: '$(Build.BinariesDirectory)'
+        SourceFolder: '$(Build.SourcesDirectory)/bin/$(buildConfiguration)'
         Contents: '**/*'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
       displayName: 'Copy Build Output to Artifact Staging'
-    
+
+    # Debugging: List files in artifact staging directory
+    - script: |
+        echo "Listing artifact staging directory..."
+        ls -la $(Build.ArtifactStagingDirectory)
+      displayName: 'Verify Artifact Staging Directory'
+
     # Publish the artifact for use in deployment stages
     - task: PublishBuildArtifacts@1
       inputs:
@@ -63,13 +85,9 @@ stages:
           - script: |
               echo "Listing deployment directory..."
               ls -la $(Pipeline.Workspace)/drop
-              echo "Checking environment variables..."
-              env
-            displayName: 'Debug Deployment Files and Environment'
+            displayName: 'Debug Deployment Files'
 
           - script: |
-              echo "Converting script to Unix format..."
-              /usr/bin/dos2unix $(Pipeline.Workspace)/drop/deploy_dev.sh || echo "dos2unix not found, skipping..."
               chmod +x $(Pipeline.Workspace)/drop/deploy_dev.sh
               echo "Starting deployment..."
               /bin/bash $(Pipeline.Workspace)/drop/deploy_dev.sh
@@ -96,17 +114,13 @@ stages:
               artifactName: 'drop'
               downloadPath: '$(Pipeline.Workspace)/drop'
             displayName: 'Download Build Artifacts'
-          
+
           - script: |
               echo "Listing deployment directory..."
               ls -la $(Pipeline.Workspace)/drop
-              echo "Checking environment variables..."
-              env
-            displayName: 'Debug Deployment Files and Environment'
+            displayName: 'Debug Deployment Files'
 
           - script: |
-              echo "Converting script to Unix format..."
-              /usr/bin/dos2unix $(Pipeline.Workspace)/drop/deploy_prod.sh || echo "dos2unix not found, skipping..."
               chmod +x $(Pipeline.Workspace)/drop/deploy_prod.sh
               echo "Starting deployment..."
               /bin/bash $(Pipeline.Workspace)/drop/deploy_prod.sh
