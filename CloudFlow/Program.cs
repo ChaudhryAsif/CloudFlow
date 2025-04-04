@@ -4,6 +4,7 @@ using Application.Mapper;
 using Application.Models;
 using Application.Persistence;
 using Application.Repositories;
+using AzzurFunctionApp.Functions;
 using Domain.Entities;
 using MediatR;
 using Microsoft.ApplicationInsights;
@@ -58,6 +59,9 @@ var host = new HostBuilder()
 
         // Register IProductRepository
         services.AddScoped<IProductRepository, ProductRepository>();
+
+        services.AddSingleton<OrderCommandHandler>();
+        services.AddSingleton<ProcessOrderFunction>();
 
         // Register AutoMapper
         services.AddAutoMapper(typeof(MappingProfile));
