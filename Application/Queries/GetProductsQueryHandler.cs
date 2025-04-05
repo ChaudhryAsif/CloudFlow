@@ -6,7 +6,11 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, List<ProductDto>> // ✅ Implement IRequestHandler<TRequest, TResponse>
+public class GetProductsQuery : IRequest<List<ProductDto>>
+{
+}
+
+public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, List<ProductDto>>
 {
     private readonly IProductRepository _productRepository;
     private readonly IMapper _mapper;

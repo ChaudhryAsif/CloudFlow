@@ -4,6 +4,12 @@ using MediatR;
 
 namespace Application.Commands
 {
+    public class CreateProductCommand : IRequest<Product>
+    {
+        public string Name { get; set; }
+        public decimal Price { get; set; }
+    }
+
     public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, Product>
     {
         private readonly IProductRepository _repository;
